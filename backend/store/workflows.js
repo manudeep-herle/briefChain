@@ -36,34 +36,18 @@ export const workflows = {
         name: "AI Summarizer",
         params: {},
       },
-      {
-        id: "s5",
-        type: "slack.webhook",
-        name: "Slack Delivery",
-        params: {},
-      },
+      // {
+      //   id: "s5",
+      //   type: "slack.webhook",
+      //   name: "Slack Delivery",
+      //   params: {},
+      // },
     ],
     secrets: {
-      OPENAI_KEY: "", // fill with your OpenAI API key
-      SLACK_WEBHOOK_URL: "", // fill with your Slack Incoming Webhook URL (optional for testing)
+      OPENAI_KEY: process.env.OPENAI_KEY || "", // Get from .env or environment
+      SLACK_WEBHOOK_URL: "", //
     },
     createdAt: "2025-08-08T21:00:00Z",
     updatedAt: "2025-08-08T21:00:00Z",
-  },
-  "github-only": {
-    id: "github-only",
-    name: "Github test",
-    desc: "Github test",
-    steps: [
-      {
-        id: "s1",
-        type: "github.repoSummary",
-        name: "GitHub Repo Summary",
-        params: {
-          owner: "facebook",
-          repo: "react",
-        },
-      },
-    ],
   },
 };

@@ -41,8 +41,11 @@ router.post("/:id/run", async (req, res) => {
   try {
     const secrets = {
       ...(workflow.secrets || {}),
+      OPENAI_KEY:
+        process.env.OPENAI_KEY || (workflow.secrets?.OPENAI_KEY ?? ""),
       ...(req.body?.secrets || {}),
     };
+
     const result = await executeWorkflow(workflow, secrets);
     res.json(result);
   } catch (error) {
