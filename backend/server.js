@@ -12,11 +12,11 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // health check API
-app.get("/health", (req, res) => res.json({ ok: true }));
+app.get("/api/health", (req, res) => res.json({ ok: true }));
 
 // Mount route modules
-app.use("/connectors", connectorsRouter);
-app.use("/workflows", workflowsRouter);
+app.use("/api/connectors", connectorsRouter);
+app.use("/api/workflows", workflowsRouter);
 
 const PORT = process.env.PORT || 3000;
 
