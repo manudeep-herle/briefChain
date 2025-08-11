@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "start:dev": "nodemon server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migration:generate": "node -r dotenv/config -r reflect-metadata ./node_modules/typeorm/cli.js migration:generate -d ./data-source.js --outputJs --esm",
+    "migration:run": "node -r dotenv/config -r reflect-metadata ./node_modules/typeorm/cli.js migration:run -d ./data-source.js",
+    "migration:revert": "node -r dotenv/config -r reflect-metadata ./node_modules/typeorm/cli.js migration:revert -d ./data-source.js",
+    "migration:show": "node -r dotenv/config -r reflect-metadata ./node_modules/typeorm/cli.js migration:show -d ./data-source.js"
   },
   "keywords": [],
   "author": "",
@@ -18,6 +22,9 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "nodemon": "^3.1.10",
-    "openai": "^5.12.2"
+    "openai": "^5.12.2",
+    "pg": "^8.16.3",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.25"
   }
 }

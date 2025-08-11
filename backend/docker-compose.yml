@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16
+    container_name: pg
+    environment:
+      POSTGRES_USER: bc_user
+      POSTGRES_PASSWORD: bc_pass
+      POSTGRES_DB: bc_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bc_user -d bc_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
