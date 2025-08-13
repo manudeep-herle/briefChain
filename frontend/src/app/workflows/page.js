@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 function Workflows() {
+  const router = useRouter();
   const [workflows, setWorkflows] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,14 +42,64 @@ function Workflows() {
     }));
   };
 
-  const handleRunWorkflow = (workflowId) => {
-    console.log("Running workflow:", workflowId);
-    // TODO: Implement workflow run functionality
+  const handleRunWorkflow = async (workflowId) => {
+    try {
+      // Optimistically update status to running
+      setWorkflows(prev => 
+        prev.map(wf => 
+          wf.id === workflowId 
+            ? { ...wf, status: 'running' }
+            : wf
+        )
+      );
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/workflows/${workflowId}/run`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}), // Can add secrets here if needed
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to run workflow: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Update workflow with success status and last run time
+      setWorkflows(prev => 
+        prev.map(wf => 
+          wf.id === workflowId 
+            ? { 
+                ...wf, 
+                status: 'success',
+                lastRun: new Date().toISOString()
+              }
+            : wf
+        )
+      );
+
+      console.log('Workflow completed:', result);
+    } catch (error) {
+      console.error('Failed to run workflow:', error);
+      
+      // Update status to error
+      setWorkflows(prev => 
+        prev.map(wf => 
+          wf.id === workflowId 
+            ? { ...wf, status: 'error' }
+            : wf
+        )
+      );
+    }
   };
 
   const handleOpenWorkflow = (workflowId) => {
-    console.log("Opening workflow:", workflowId);
-    // TODO: Implement workflow open functionality
+    router.push(`/workflows/${workflowId}`);
   };
 
   const handleSecretsSettings = (workflowId) => {
@@ -161,9 +213,14 @@ function Workflows() {
                 </button>
                 <button
                   onClick={() => handleRunWorkflow(workflow.id)}
-                  className="px-3 py-1 text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 rounded"
+                  disabled={workflow.status === 'running'}
+                  className={`px-3 py-1 text-sm rounded ${
+                    workflow.status === 'running'
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-100 hover:bg-blue-200 text-blue-800'
+                  }`}
                 >
-                  Run
+                  {workflow.status === 'running' ? 'Running...' : 'Run'}
                 </button>
               </div>
 

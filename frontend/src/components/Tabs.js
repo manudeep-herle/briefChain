@@ -8,7 +8,7 @@ function Tabs({ TABS }) {
 
   return (
     <div className="border-b bg-white">
-      <div className="mx-auto max-w-6xl px-6">
+      <div className="mx-auto">
         <nav className="flex gap-2 py-3">
           {TABS.map((t) => {
             const active = pathname.startsWith(t.href);

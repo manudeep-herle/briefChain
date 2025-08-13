@@ -4,7 +4,14 @@ export default async function executeWorkflow(workflow, secrets) {
   const executionLog = [];
   const context = {}; // accumulates normalized outputs for later steps
 
-  for (const step of workflow.steps) {
+  // Handle both old format (workflow.steps) and new format (workflow.config.steps)
+  const steps = workflow.steps || workflow.config?.steps || [];
+  
+  if (!steps.length) {
+    throw new Error('No steps found in workflow');
+  }
+
+  for (const step of steps) {
     const start = Date.now();
 
     const connector = registry[step.type];

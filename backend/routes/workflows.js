@@ -84,9 +84,9 @@ router.post("/:id/run", async (req, res) => {
       return res.status(404).json({ error: "workflow_not_found_or_inactive" });
 
     const config = wf.config || {};
-    const nodes = Array.isArray(config?.nodes) ? config.nodes : [];
+    const steps = Array.isArray(config?.steps) ? config.steps : [];
     const wantedKeys = Array.from(
-      new Set(nodes.map((n) => n?.use).filter(Boolean))
+      new Set(steps.map((s) => s?.type).filter(Boolean))
     );
 
     // If the workflow has no bound connectors yet, we *could* loosely fetch by key,
@@ -119,9 +119,9 @@ router.post("/:id/run", async (req, res) => {
       });
     }
 
-    // Merge secrets: workflow-stored -> env -> request body
+    // Merge secrets: workflow config -> env -> request body
     const secrets = {
-      ...(wf.secrets || {}), // if you later add this column
+      ...(config.secrets || {}), // from workflow.config.secrets
       OPENAI_KEY: process.env.OPENAI_KEY || undefined,
       ...(req.body?.secrets || {}),
     };

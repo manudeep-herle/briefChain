@@ -9,10 +9,16 @@ router.get("/", async (req, res) => {
     const rows = await repo.find({ order: { name: "ASC" } });
 
     const data = rows.map((c) => ({
-      name: c.name, // "GitHub Repo Summary"
-      type: c.type, // "github", "npm", "ai", "security"
+      id: c.id,
+      key: c.key,
+      name: c.name,
+      type: c.type,
       description: c.description || "",
-      parameters: c.parameters || [], // array of { name: string, type: string }
+      paramSchema: c.paramSchema || null,
+      defaultParams: c.defaultParams || null,
+      config: c.config || null,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
     }));
 
     res.json(data);

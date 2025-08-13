@@ -3,20 +3,87 @@ const DEFAULT_CONNECTORS = [
     key: "github.repoSummary",
     name: "GitHub Repository Summary",
     type: "github",
+    description: "Fetches comprehensive repository statistics including stars, forks, issues, and recent activity from GitHub API",
+    paramSchema: {
+      type: "object",
+      properties: {
+        owner: { type: "string", description: "Repository owner username" },
+        repo: { type: "string", description: "Repository name" }
+      },
+      required: ["owner", "repo"]
+    },
+    defaultParams: null,
     config: null,
   },
-  { key: "npm.downloads", name: "npm Downloads", type: "npm", config: null },
+  {
+    key: "npm.downloads",
+    name: "npm Downloads",
+    type: "npm",
+    description: "Retrieves download statistics for npm packages over specified time periods",
+    paramSchema: {
+      type: "object",
+      properties: {
+        packageName: { type: "string", description: "npm package name" },
+        period: { type: "string", enum: ["last-day", "last-week", "last-month"], default: "last-week" }
+      },
+      required: ["packageName"]
+    },
+    defaultParams: { period: "last-week" },
+    config: null,
+  },
   {
     key: "openssf.scorecard",
     name: "OpenSSF Scorecard",
     type: "openssf",
+    description: "Analyzes repository security practices using OpenSSF Scorecard to assess security posture",
+    paramSchema: {
+      type: "object",
+      properties: {
+        owner: { type: "string", description: "Repository owner username" },
+        repo: { type: "string", description: "Repository name" }
+      },
+      required: ["owner", "repo"]
+    },
+    defaultParams: null,
     config: null,
   },
   {
     key: "ai.summarizeBrief",
     name: "AI Summarize Brief",
     type: "ai",
+    description: "Uses AI to generate concise summaries and insights from collected data and metrics",
+    paramSchema: {
+      type: "object",
+      properties: {
+        model: { type: "string", enum: ["gpt-4o-mini", "gpt-4", "gpt-3.5-turbo"], default: "gpt-4o-mini" },
+        maxTokens: { type: "number", default: 1000 },
+        temperature: { type: "number", minimum: 0, maximum: 1, default: 0.7 }
+      }
+    },
+    defaultParams: {
+      maxTokens: 1000,
+      temperature: 0.7
+    },
     config: { model: "gpt-4o-mini" },
+  },
+  {
+    key: "slack.webhook",
+    name: "Slack Webhook",
+    type: "slack",
+    description: "Sends formatted messages and notifications to Slack channels via webhook integration",
+    paramSchema: {
+      type: "object",
+      properties: {
+        webhookUrl: { type: "string", description: "Slack webhook URL" },
+        channel: { type: "string", description: "Target channel (optional if webhook has default)" },
+        username: { type: "string", description: "Bot username for the message" }
+      },
+      required: ["webhookUrl"]
+    },
+    defaultParams: {
+      username: "BriefChain Bot"
+    },
+    config: null,
   },
 ];
 

@@ -7,22 +7,51 @@ function Connectors() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/connectors`)
-      .then((response) => {
+    const fetchConnectors = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/connectors`
+        );
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`Error: ${response.status} ${response.statusText}`);
         }
-        return response.json();
-      })
-      .then((data) => {
+        const data = await response.json();
         setConnectors(data);
+        setError(null);
+      } catch (error) {
+        console.error("Failed to fetch connectors:", error);
+        setConnectors([]);
+        setError("Failed to load connectors. Please try again later.");
+      } finally {
         setLoading(false);
-      })
-      .catch((error) => {
-        setError(error.message);
-        setLoading(false);
-      });
+      }
+    };
+
+    fetchConnectors();
   }, []);
+
+  const handleDeleteConnector = (connectorId) => {
+    console.log("Deleting connector:", connectorId);
+    // TODO: Implement connector deletion
+  };
+
+  const handleEditConnector = (connectorId) => {
+    console.log("Editing connector:", connectorId);
+    // TODO: Implement connector editing
+  };
+
+  const getTypeColor = (type) => {
+    const typeColors = {
+      github: "bg-gray-100 text-gray-800",
+      npm: "bg-red-100 text-red-800",
+      openssf: "bg-green-100 text-green-800",
+      ai: "bg-purple-100 text-purple-800",
+      slack: "bg-blue-100 text-blue-800",
+    };
+
+    return typeColors[type] || "bg-gray-100 text-gray-800";
+  };
 
   if (loading) {
     return (
@@ -47,39 +76,87 @@ function Connectors() {
     <div>
       <div className="flex pt-4 pb-4 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2>Connectors</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl font-bold">Connectors</h2>
+          <p className="text-gray-600 mt-1">
             Available data connectors for workflow steps
           </p>
         </div>
-        <div className="">
-          <div className=""></div>
-          <button disabled className="gap-2">
-            Add
+        <div>
+          <button
+            disabled
+            className="px-4 py-2 bg-gray-300 text-gray-500 rounded cursor-not-allowed"
+          >
+            Add Connector
           </button>
         </div>
       </div>
 
-      <ul className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {connectors.map((connector) => (
-          <li key={connector.id} className="p-4 border border-gray-200 rounded">
-            <h3 className="text-lg font-semibold">{connector.name}</h3>
-            <p className="text-gray-600">
-              {connector.description || "lorem ipsum dolor sit amet"}
-            </p>
-            <p className="font-semibold">Parameters</p>
-            {connector.parameters?.length ? (
-              <p className="text-gray-600">{connector.parameters.join(", ")}</p>
-            ) : (
-              <p className="text-gray-600">No parameters available.</p>
-            )}
-            <div className="mt-2 flex justify-between gap-2">
-              <button>Delete</button>
-              <button>Edit</button>
+          <div
+            key={connector.id}
+            className="p-6 border border-gray-200 rounded-lg bg-white"
+          >
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-lg font-semibold">{connector.name}</h3>
+              <span
+                className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(
+                  connector.type
+                )}`}
+              >
+                {connector.type}
+              </span>
             </div>
-          </li>
+
+            <p className="text-gray-600 mb-4 text-sm">
+              {connector.description || "No description available"}
+            </p>
+
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Key</h4>
+              <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                {connector.key}
+              </code>
+            </div>
+
+            {connector.config && (
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  Configuration
+                </h4>
+                <div className="text-xs bg-gray-50 p-2 rounded border">
+                  {typeof connector.config === "object" &&
+                  Object.entries(connector.config)?.length ? (
+                    Object.entries(connector.config).map(([key, value]) => (
+                      <div key={key} className="flex justify-between">
+                        <span className="text-gray-600">{key}:</span>
+                        <span className="font-medium">{String(value)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-gray-600">No configuration</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
+              <button 
+                onClick={() => handleEditConnector(connector.id)}
+                className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+              >
+                Edit
+              </button>
+              <button 
+                onClick={() => handleDeleteConnector(connector.id)}
+                className="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-800 rounded"
+              >
+                Delete
+              </button>
+            </div> */}
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
