@@ -1,7 +1,5 @@
-"use client";
-
-import { Children, useEffect, useState } from "react";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <div className="font-sans">{Children}</div>;
+  redirect("/connectors");
 }

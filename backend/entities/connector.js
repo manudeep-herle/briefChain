@@ -9,7 +9,10 @@ export default new EntitySchema({
     key: { type: String, unique: true },
     name: { type: String },
     type: { type: String },
-    config: { type: "jsonb", nullable: true },
+    description: { type: String, nullable: true }, // UI/help
+    paramSchema: { type: "jsonb", nullable: true }, // JSON Schema / Zod-like
+    defaultParams: { type: "jsonb", nullable: true }, // optional global defaults
+    config: { type: "jsonb", nullable: true }, // connector-level config (e.g., base_url)
     createdAt: { type: "timestamptz", createDate: true },
     updatedAt: { type: "timestamptz", updateDate: true },
   },

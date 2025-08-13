@@ -6,12 +6,12 @@
  * @class
  * @implements {MigrationInterface}
  */
-export class WorkflowsConnectorsInit1754874417031 {
-    name = 'WorkflowsConnectorsInit1754874417031'
+export class InitWorkflowConnector1755117022585 {
+    name = 'InitWorkflowConnector1755117022585'
 
     async up(queryRunner) {
         await queryRunner.query(`CREATE TABLE "workflows" ("id" SERIAL NOT NULL, "name" character varying NOT NULL, "description" character varying, "isActive" boolean NOT NULL DEFAULT true, "config" jsonb, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_5b5757cc1cd86268019fef52e0c" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "connectors" ("id" SERIAL NOT NULL, "key" character varying NOT NULL, "name" character varying NOT NULL, "type" character varying NOT NULL, "config" jsonb, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_7b6fdd4504f608a94fb344918ee" UNIQUE ("key"), CONSTRAINT "PK_c1334e2a68a8de86d1732a8e3fb" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TABLE "connectors" ("id" SERIAL NOT NULL, "key" character varying NOT NULL, "name" character varying NOT NULL, "type" character varying NOT NULL, "description" character varying, "paramSchema" jsonb, "defaultParams" jsonb, "config" jsonb, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_7b6fdd4504f608a94fb344918ee" UNIQUE ("key"), CONSTRAINT "PK_c1334e2a68a8de86d1732a8e3fb" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE UNIQUE INDEX "idx_connectors_key" ON "connectors" ("key") `);
         await queryRunner.query(`CREATE INDEX "idx_connectors_type" ON "connectors" ("type") `);
         await queryRunner.query(`CREATE TABLE "workflow_connectors" ("workflow_id" integer NOT NULL, "connector_id" integer NOT NULL, CONSTRAINT "PK_d8f76d733b7685c21b40911dddd" PRIMARY KEY ("workflow_id", "connector_id"))`);
