@@ -13,8 +13,27 @@ const router = express.Router();
 router.get("/", async (req, res) => {
   try {
     const wfRepo = AppDataSource.getRepository("Workflow");
-    const workflows = await wfRepo.find();
-    return res.json(workflows);
+    const workflows = await wfRepo.find({
+      relations: { executions: true },
+      order: { 
+        updatedAt: "DESC",
+        executions: { startedAt: "DESC" }
+      }
+    });
+    
+    // Add last execution info to each workflow
+    const workflowsWithStatus = workflows.map(wf => {
+      const lastExecution = wf.executions?.[0]; // First item is already the latest due to DESC order
+      
+      return {
+        ...wf,
+        status: lastExecution?.status || 'idle',
+        lastRun: lastExecution?.startedAt,
+        lastExecutionId: lastExecution?.id
+      };
+    });
+    
+    return res.json(workflowsWithStatus);
   } catch (e) {
     console.error("GET /workflows failed:", e);
     return res.status(500).json({ error: "failed_to_get_workflows" });
@@ -34,10 +53,14 @@ router.get("/:id", async (req, res) => {
     const wfRepo = AppDataSource.getRepository("Workflow");
     const wf = await wfRepo.findOne({
       where: { id },
-      relations: { connectors: true },
+      relations: { connectors: true, executions: true },
+      order: { executions: { startedAt: "DESC" } }
     });
 
     if (!wf) return res.status(404).json({ error: "workflow_not_found" });
+
+    // Get last execution (first item is already the latest due to DESC order)
+    const lastExecution = wf.executions?.[0];
 
     // shape it a bit for the client
     return res.json({
@@ -52,6 +75,18 @@ router.get("/:id", async (req, res) => {
         name: c.name,
         type: c.type,
       })),
+      status: lastExecution?.status || 'idle',
+      lastRun: lastExecution?.startedAt,
+      lastExecution: lastExecution ? {
+        id: lastExecution.id,
+        status: lastExecution.status,
+        startedAt: lastExecution.startedAt,
+        completedAt: lastExecution.completedAt,
+        executionLog: lastExecution.executionLog,
+        finalResult: lastExecution.finalResult,
+        errorMessage: lastExecution.errorMessage,
+        failedStepId: lastExecution.failedStepId
+      } : null,
       updatedAt: wf.updatedAt,
       createdAt: wf.createdAt,
     });
@@ -140,8 +175,40 @@ router.post("/:id/run", async (req, res) => {
       })),
     };
 
-    const result = await executeWorkflow(workflowForRun, secrets);
-    return res.json(result);
+    // Create execution record
+    const executionRepo = AppDataSource.getRepository("WorkflowExecution");
+    const execution = await executionRepo.save({
+      workflowId: wf.id,
+      status: "running",
+      startedAt: new Date()
+    });
+
+    try {
+      const result = await executeWorkflow(workflowForRun, secrets);
+      
+      // Update execution with results
+      await executionRepo.update(execution.id, {
+        status: result.failedStepId ? "error" : "success",
+        completedAt: new Date(),
+        executionLog: result.executionLog,
+        finalResult: result.final,
+        errorMessage: result.failedStepId ? `Failed at step: ${result.failedStepId}` : null,
+        failedStepId: result.failedStepId || null
+      });
+      
+      return res.json({
+        ...result,
+        executionId: execution.id
+      });
+    } catch (error) {
+      // Update execution with error
+      await executionRepo.update(execution.id, {
+        status: "error",
+        completedAt: new Date(),
+        errorMessage: error.message
+      });
+      throw error;
+    }
   } catch (e) {
     console.error("POST /workflows/:id/run failed:", e);
     return res.status(500).json({ error: "run_failed", message: e.message });

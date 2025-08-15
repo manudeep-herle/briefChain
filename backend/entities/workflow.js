@@ -23,5 +23,11 @@ export default new EntitySchema({
         inverseJoinColumn: { name: "connector_id" },
       },
     },
+    executions: {
+      type: "one-to-many",
+      target: "WorkflowExecution",
+      // inverseSide for workflow -> workflowExecution knowledge (workflowExecution -> workflow is known by default)
+      inverseSide: "workflow",
+    },
   },
 });

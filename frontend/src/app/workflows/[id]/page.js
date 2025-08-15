@@ -12,34 +12,79 @@ function WorkflowDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastResult, setLastResult] = useState(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [pollingInterval, setPollingInterval] = useState(null);
+
+  const fetchWorkflowDetails = async () => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/workflows/${workflowId}`
+      );
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      setWorkflow(data);
+      
+      // Set last result if available from previous execution
+      if (data.lastExecution) {
+        setLastResult({
+          executionLog: data.lastExecution.executionLog,
+          final: data.lastExecution.finalResult,
+          failedStepId: data.lastExecution.failedStepId
+        });
+      }
+      
+      // Check if workflow is running and start polling if needed
+      if (data.status === 'running' && !pollingInterval) {
+        startPolling();
+      } else if (data.status !== 'running' && pollingInterval) {
+        stopPolling();
+      }
+      
+      setError(null);
+      return data;
+    } catch (error) {
+      console.error("Failed to fetch workflow details:", error);
+      setError("Failed to load workflow details. Please try again later.");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startPolling = () => {
+    if (pollingInterval) return; // Already polling
+    
+    const interval = setInterval(async () => {
+      const data = await fetchWorkflowDetails();
+      if (data && data.status !== 'running') {
+        stopPolling();
+        setIsRunning(false);
+      }
+    }, 2000); // Poll every 2 seconds
+    
+    setPollingInterval(interval);
+  };
+
+  const stopPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
+  };
 
   useEffect(() => {
     if (!workflowId) return;
-
-    const fetchWorkflowDetails = async () => {
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/workflows/${workflowId}`
-        );
-        if (!response.ok) {
-          throw new Error(`Error: ${response.status} ${response.statusText}`);
-        }
-        const data = await response.json();
-        setWorkflow(data);
-        setError(null);
-      } catch (error) {
-        console.error("Failed to fetch workflow details:", error);
-        setError("Failed to load workflow details. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchWorkflowDetails();
+    
+    // Cleanup polling on unmount
+    return () => stopPolling();
   }, [workflowId]);
 
   const handleRunWorkflow = async () => {
     try {
+      setIsRunning(true);
       setWorkflow(prev => ({ ...prev, status: 'running' }));
       
       const response = await fetch(
@@ -57,16 +102,25 @@ function WorkflowDetails() {
         throw new Error(`Failed to run workflow: ${response.status}`);
       }
 
+      // Start polling for status updates
+      startPolling();
+      
       const result = await response.json();
       setLastResult(result);
       setWorkflow(prev => ({
         ...prev,
-        status: 'success',
+        status: result.failedStepId ? 'error' : 'success',
         lastRun: new Date().toISOString()
       }));
+      
+      // Stop polling since we have the final result
+      stopPolling();
     } catch (error) {
       console.error('Failed to run workflow:', error);
       setWorkflow(prev => ({ ...prev, status: 'error' }));
+      stopPolling();
+    } finally {
+      setIsRunning(false);
     }
   };
 
@@ -154,14 +208,14 @@ function WorkflowDetails() {
         </div>
         <button
           onClick={handleRunWorkflow}
-          disabled={workflow.status === 'running'}
+          disabled={isRunning || workflow.status === 'running'}
           className={`px-4 py-2 rounded ${
-            workflow.status === 'running'
+            isRunning || workflow.status === 'running'
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-blue-500 hover:bg-blue-600 text-white'
           }`}
         >
-          {workflow.status === 'running' ? 'Running...' : 'Run Workflow'}
+          {isRunning || workflow.status === 'running' ? 'Running...' : 'Run Workflow'}
         </button>
       </div>
 
@@ -197,7 +251,7 @@ function WorkflowDetails() {
             </div>
             
             <div className="min-h-96">
-              {workflow.status === 'running' ? (
+              {isRunning || workflow.status === 'running' ? (
                 <div className="flex items-center justify-center h-96">
                   <div className="text-center">
                     <div className="loader border-4 border-blue-200 border-t-blue-600 rounded-full w-12 h-12 animate-spin mx-auto mb-4"></div>
@@ -206,6 +260,13 @@ function WorkflowDetails() {
                 </div>
               ) : lastResult ? (
                 <div className="space-y-4">
+                  {lastResult.failedStepId && (
+                    <div className="bg-red-50 border border-red-200 p-4 rounded">
+                      <h3 className="font-medium text-red-800 mb-2">Execution Failed</h3>
+                      <p className="text-red-700 text-sm">Failed at step: {lastResult.failedStepId}</p>
+                    </div>
+                  )}
+                  
                   {lastResult.final?.markdown ? (
                     <div className="bg-gray-50 p-4 rounded border">
                       <h3 className="font-medium mb-2">Generated Summary</h3>
@@ -242,6 +303,11 @@ function WorkflowDetails() {
                       </div>
                     </div>
                   )}
+                </div>
+              ) : workflow.lastExecution ? (
+                <div className="text-center text-gray-500 py-8">
+                  <p>Previous execution results are loaded above.</p>
+                  <p className="text-sm mt-2">Run the workflow again to see new results.</p>
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-96">
