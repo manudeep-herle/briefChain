@@ -222,7 +222,7 @@ function WorkflowDetails() {
       <div className="grid grid-cols-3 gap-6">
         {/* Results Card - Takes 2/3 of the width */}
         <div className="col-span-2">
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="ui-card p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Results</h2>
               {lastResult && (
@@ -324,7 +324,7 @@ function WorkflowDetails() {
 
         {/* Steps Card - Takes 1/3 of the width */}
         <div className="col-span-1">
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="ui-card p-6">
             <h2 className="text-lg font-semibold mb-4">Workflow Steps</h2>
             <div className="space-y-3">
               {workflow.config?.steps?.map((step, index) => (

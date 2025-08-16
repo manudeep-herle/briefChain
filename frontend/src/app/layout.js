@@ -10,13 +10,19 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <div className="min-h-screen flex flex-col">
-          <header className="bg-gray-900 text-white p-4"> BriefChain</header>
+          <header
+            className="text-white p-4 font-semibold"
+            style={{
+              background:
+                "linear-gradient(to right, #3b82f6, #6366f1, #8b5cf6)",
+            }}
+          >
+            Conduit
+          </header>
           <main className="p-6 grow">
             <ClientShell>{children}</ClientShell>
           </main>
-          <footer className="flex justify-center">
-            &copy; 2025 BriefChain
-          </footer>
+          <footer className="flex justify-center">&copy; 2025 Conduit</footer>
         </div>
       </body>
     </html>

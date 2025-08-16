@@ -176,7 +176,10 @@ function Workflows() {
         title="Workflows"
         description="Manage and execute your automated workflows"
       >
-        <Button disabled variant="outline">
+        <Button 
+          variant="default"
+          onClick={() => router.push("/workflows/new")}
+        >
           New Workflow
         </Button>
       </PageHeader>
@@ -185,7 +188,7 @@ function Workflows() {
         {workflows.map((workflow) => (
           <div
             key={workflow.id}
-            className="p-6 border border-gray-200 rounded-lg bg-white"
+            className="p-6 ui-card"
           >
             <div className="flex justify-between items-start mb-3">
               <h3 className="text-lg font-semibold">{workflow.name}</h3>
@@ -258,7 +261,7 @@ function Workflows() {
                 </button>
 
                 {settingsDropdown[workflow.id] && (
-                  <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-10">
+                  <div className="absolute right-0 mt-1 w-32 bg-white border-ui rounded shadow-lg z-10">
                     <button
                       onClick={() => handleSecretsSettings(workflow.id)}
                       className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"

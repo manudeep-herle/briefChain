@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { PageHeader } from "../../components/PageHeader";
 import { Button } from "../../components/Button";
+import { Loader } from "../../components/Loader";
 
 function Connectors() {
   const [connectors, setConnectors] = useState([]);
@@ -58,8 +59,7 @@ function Connectors() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-32">
-        <div className="loader border-4 border-blue-200 border-t-blue-600 rounded-full w-8 h-8 animate-spin"></div>
-        <span className="ml-2">Loading connectors...</span>
+        <Loader variant="bars" text="Loading connectors..." />
       </div>
     );
   }
