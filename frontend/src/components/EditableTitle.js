@@ -68,7 +68,7 @@ export function EditableTitle({
           value={editedTitle}
           onChange={(e) => setEditedTitle(e.target.value)}
           onKeyDown={handleKeyDown}
-          onBlur={handleCancel}
+          // onBlur={handleCancel}
           disabled={isLoading}
           placeholder={placeholder}
           className={`${className} bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-0 flex-1`}

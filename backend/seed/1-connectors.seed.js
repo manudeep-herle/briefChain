@@ -85,6 +85,69 @@ const DEFAULT_CONNECTORS = [
     },
     config: null,
   },
+  {
+    key: "http.request",
+    name: "HTTP Request",
+    type: "http",
+    description: "Makes HTTP requests to any API endpoint with customizable method, headers, and body",
+    paramSchema: {
+      type: "object",
+      required: ["url"],
+      properties: {
+        url: {
+          type: "string",
+          description: "API endpoint URL"
+        },
+        method: {
+          type: "string",
+          enum: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          default: "GET"
+        },
+        headers: {
+          type: "object",
+          description: "Request headers as key-value pairs",
+          additionalProperties: {
+            type: "string"
+          }
+        },
+        body: {
+          type: "string",
+          description: "Request body (for POST/PUT/PATCH)"
+        },
+        auth: {
+          type: "object",
+          properties: {
+            type: {
+              enum: ["bearer", "apikey", "basic"],
+              type: "string"
+            },
+            value: {
+              type: "string",
+              description: "Token or API key value"
+            },
+            headerName: {
+              type: "string",
+              default: "Authorization",
+              description: "Header name for API key auth"
+            }
+          }
+        },
+        timeout: {
+          type: "number",
+          default: 30000,
+          description: "Request timeout in milliseconds"
+        }
+      }
+    },
+    defaultParams: {
+      method: "GET",
+      timeout: 30000,
+      headers: {
+        "Content-Type": "application/json"
+      }
+    },
+    config: null,
+  },
 ];
 
 export default async function seedConnectors(dataSource) {

@@ -2,15 +2,51 @@ import githubRepoSummary from "../connectors/github.repoSummary.js";
 import npmDownloads from "../connectors/npm.downloads.js";
 import openssfScorecard from "../connectors/openssf.scorecard.js";
 import aiSummarizeBrief from "../connectors/ai.summarizeBrief.js";
+import httpRequest from "../connectors/http.request.js";
 // import slackWebhook from "../connectors/slack.webhook.js";
 
-// Map connector type → connector module
+// Comprehensive connector registry with implementation and context mapping
 const registry = {
-  "github.repoSummary": githubRepoSummary,
-  "npm.downloads": npmDownloads,
-  "openssf.scorecard": openssfScorecard,
-  "ai.summarizeBrief": aiSummarizeBrief,
-  // "slack.webhook": slackWebhook,
+  "github.repoSummary": {
+    implementation: githubRepoSummary,
+    contextKey: "repoSummary"
+  },
+  "npm.downloads": {
+    implementation: npmDownloads,
+    contextKey: "downloads"
+  },
+  "openssf.scorecard": {
+    implementation: openssfScorecard,
+    contextKey: "scorecard"
+  },
+  "ai.summarizeBrief": {
+    implementation: aiSummarizeBrief,
+    contextKey: "markdown", // special case: stores output.markdown
+    specialHandling: true
+  },
+  "http.request": {
+    implementation: httpRequest,
+    contextKey: "httpResponse"
+  },
+  // "slack.webhook": {
+  //   implementation: slackWebhook,
+  //   contextKey: "slack"
+  // },
 };
+
+// Helper function to get connector implementation
+export function getConnectorImplementation(type) {
+  return registry[type]?.implementation;
+}
+
+// Helper function to get context key for a connector
+export function getContextKey(type) {
+  return registry[type]?.contextKey || null;
+}
+
+// Helper function to check if connector needs special handling
+export function hasSpecialHandling(type) {
+  return registry[type]?.specialHandling || false;
+}
 
 export default registry;

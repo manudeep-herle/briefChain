@@ -1,4 +1,4 @@
-import registry from "./registry.js";
+import registry, { getConnectorImplementation, getContextKey, hasSpecialHandling } from "./registry.js";
 
 export default async function executeWorkflow(workflow, secrets) {
   const executionLog = [];
@@ -24,7 +24,7 @@ export default async function executeWorkflow(workflow, secrets) {
       
       console.log(`Executing step ${i + 1}/${steps.length}: ${step.type} (${step.id})`);
 
-      const connector = registry[step.type];
+      const connector = getConnectorImplementation(step.type);
       if (!connector) {
         const error = `Unknown connector: ${step.type}`;
         console.error(`Step ${step.id} failed: ${error}`);
@@ -40,11 +40,11 @@ export default async function executeWorkflow(workflow, secrets) {
         
         console.log(`Step ${step.id} completed successfully in ${Date.now() - start}ms`);
 
-        // Store normalized outputs for later steps using dynamic mapping
+        // Store normalized outputs for later steps using registry mapping
         const contextKey = getContextKey(step.type);
         if (contextKey) {
-          if (step.type === "ai.summarizeBrief") {
-            // Special case: store the markdown field from output
+          if (hasSpecialHandling(step.type)) {
+            // Special case: store the markdown field from output for AI connectors
             context[contextKey] = output?.markdown || "";
           } else {
             context[contextKey] = output;
@@ -87,18 +87,6 @@ export default async function executeWorkflow(workflow, secrets) {
   }
 }
 
-// Dynamic context key mapping for better maintainability
-function getContextKey(stepType) {
-  const contextMapping = {
-    "github.repoSummary": "repoSummary",
-    "npm.downloads": "downloads", 
-    "openssf.scorecard": "scorecard",
-    "ai.summarizeBrief": "markdown", // special case: stores output.markdown
-    "slack.webhook": "slack"
-  };
-  
-  return contextMapping[stepType] || null;
-}
 
 function safePreview(obj) {
   try {

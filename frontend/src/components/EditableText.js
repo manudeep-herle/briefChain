@@ -67,7 +67,7 @@ export function EditableText({
           value={editedText}
           onChange={(e) => setEditedText(e.target.value)}
           onKeyDown={handleKeyDown}
-          onBlur={handleCancel}
+          // onBlur={handleCancel}
           disabled={isLoading}
           placeholder={placeholder}
           rows={multiline ? 3 : undefined}

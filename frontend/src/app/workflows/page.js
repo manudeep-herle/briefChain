@@ -242,7 +242,8 @@ function Workflows() {
               <p className="text-gray-600 mb-4 text-sm">
                 {workflow.description || "No description available"}
               </p>
-
+            </div>
+            <div>
               <div className="space-y-2 mb-4 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Steps:</span>
@@ -257,8 +258,6 @@ function Workflows() {
                   </span>
                 </div>
               </div>
-            </div>
-            <div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex gap-2">
                   <Button
@@ -291,12 +290,12 @@ function Workflows() {
 
                   {settingsDropdown[workflow.id] && (
                     <div className="absolute right-0 mt-1 w-32 bg-white border-ui rounded shadow-lg z-10">
-                      <button
+                      {/* <button
                         onClick={() => handleSecretsSettings(workflow.id)}
                         className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
                       >
                         Secrets
-                      </button>
+                      </button> */}
                       <button
                         onClick={() => handleDeleteWorkflow(workflow.id)}
                         className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-red-600"
