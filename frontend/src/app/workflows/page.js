@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "../../components/Button";
+import { Loader } from "../../components/Loader";
+import { PageHeader } from "../../components/PageHeader";
 
 function Workflows() {
   const router = useRouter();
@@ -152,8 +155,7 @@ function Workflows() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-32">
-        <div className="loader border-4 border-blue-200 border-t-blue-600 rounded-full w-8 h-8 animate-spin"></div>
-        <span className="ml-2">Loading workflows...</span>
+        <Loader variant="wave" text="Loading workflows..." />
       </div>
     );
   }
@@ -170,19 +172,14 @@ function Workflows() {
 
   return (
     <div>
-      <div className="flex pt-4 pb-4 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2>Workflows</h2>
-          <p className="text-muted-foreground">
-            Manage and execute your automated workflows
-          </p>
-        </div>
-        <div className="">
-          <button disabled className="gap-2">
-            New Workflow
-          </button>
-        </div>
-      </div>
+      <PageHeader 
+        title="Workflows"
+        description="Manage and execute your automated workflows"
+      >
+        <Button disabled variant="outline">
+          New Workflow
+        </Button>
+      </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {workflows.map((workflow) => (
@@ -216,23 +213,21 @@ function Workflows() {
 
             <div className="flex items-center justify-between gap-2">
               <div className="flex gap-2">
-                <button
+                <Button
                   onClick={() => handleOpenWorkflow(workflow.id)}
-                  className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+                  variant="outline"
+                  size="sm"
                 >
                   Open
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleRunWorkflow(workflow.id)}
                   disabled={workflow.status === 'running'}
-                  className={`px-3 py-1 text-sm rounded ${
-                    workflow.status === 'running'
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-100 hover:bg-blue-200 text-blue-800'
-                  }`}
+                  variant={workflow.status === 'running' ? 'secondary' : 'default'}
+                  size="sm"
                 >
                   {workflow.status === 'running' ? 'Running...' : 'Run'}
-                </button>
+                </Button>
               </div>
 
               <div className="relative">

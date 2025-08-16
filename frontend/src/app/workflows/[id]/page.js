@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Button } from "../../../components/Button";
+import { Loader } from "../../../components/Loader";
 
 function WorkflowDetails() {
   const params = useParams();
@@ -163,8 +165,7 @@ function WorkflowDetails() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-32">
-        <div className="loader border-4 border-blue-200 border-t-blue-600 rounded-full w-8 h-8 animate-spin"></div>
-        <span className="ml-2">Loading workflow details...</span>
+        <Loader variant="bars" text="Loading workflow details..." />
       </div>
     );
   }
@@ -173,12 +174,13 @@ function WorkflowDetails() {
     return (
       <div className="text-red-600 p-4">
         <p>{error}</p>
-        <button 
+        <Button 
           onClick={() => router.back()}
-          className="mt-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded"
+          variant="outline"
+          className="mt-2"
         >
           Go Back
-        </button>
+        </Button>
       </div>
     );
   }
@@ -192,12 +194,13 @@ function WorkflowDetails() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <button 
+          <Button 
             onClick={() => router.back()}
-            className="text-gray-500 hover:text-gray-700"
+            variant="ghost"
+            size="sm"
           >
             ← Back
-          </button>
+          </Button>
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">{workflow.name}</h1>
@@ -206,17 +209,13 @@ function WorkflowDetails() {
             <p className="text-gray-600 mt-1">{workflow.description}</p>
           </div>
         </div>
-        <button
+        <Button
           onClick={handleRunWorkflow}
           disabled={isRunning || workflow.status === 'running'}
-          className={`px-4 py-2 rounded ${
-            isRunning || workflow.status === 'running'
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-blue-500 hover:bg-blue-600 text-white'
-          }`}
+          variant={isRunning || workflow.status === 'running' ? 'secondary' : 'default'}
         >
           {isRunning || workflow.status === 'running' ? 'Running...' : 'Run Workflow'}
-        </button>
+        </Button>
       </div>
 
       {/* Main Layout: 2/3 Results + 1/3 Steps */}
@@ -228,24 +227,28 @@ function WorkflowDetails() {
               <h2 className="text-lg font-semibold">Results</h2>
               {lastResult && (
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     onClick={copyResults}
-                    className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded flex items-center gap-1"
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                     Copy
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={downloadResults}
-                    className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded flex items-center gap-1"
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     Download
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -254,8 +257,7 @@ function WorkflowDetails() {
               {isRunning || workflow.status === 'running' ? (
                 <div className="flex items-center justify-center h-96">
                   <div className="text-center">
-                    <div className="loader border-4 border-blue-200 border-t-blue-600 rounded-full w-12 h-12 animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-600">Workflow is running...</p>
+                    <Loader variant="wave" size="lg" text="Workflow is running..." />
                   </div>
                 </div>
               ) : lastResult ? (

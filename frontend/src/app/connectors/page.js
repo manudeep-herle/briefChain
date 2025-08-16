@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
+import { PageHeader } from "../../components/PageHeader";
+import { Button } from "../../components/Button";
 
 function Connectors() {
   const [connectors, setConnectors] = useState([]);
@@ -74,22 +76,14 @@ function Connectors() {
 
   return (
     <div>
-      <div className="flex pt-4 pb-4 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Connectors</h2>
-          <p className="text-gray-600 mt-1">
-            Available data connectors for workflow steps
-          </p>
-        </div>
-        <div>
-          <button
-            disabled
-            className="px-4 py-2 bg-gray-300 text-gray-500 rounded cursor-not-allowed"
-          >
-            Add Connector
-          </button>
-        </div>
-      </div>
+      <PageHeader 
+        title="Connectors"
+        description="Available data connectors for workflow steps"
+      >
+        <Button disabled variant="secondary">
+          Add Connector
+        </Button>
+      </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {connectors.map((connector) => (
