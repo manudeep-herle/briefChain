@@ -1,10 +1,9 @@
 // routes/workflows.js
 import express from "express";
-import AppDataSource from "../data-source.js";
-import { In } from "typeorm";
-import executeWorkflow from "../engine/executor.js";
+import WorkflowService from "../services/workflowService.js";
 
 const router = express.Router();
+const workflowService = new WorkflowService();
 
 /**
  * GET /api/workflows
@@ -12,31 +11,40 @@ const router = express.Router();
  */
 router.get("/", async (req, res) => {
   try {
-    const wfRepo = AppDataSource.getRepository("Workflow");
-    const workflows = await wfRepo.find({
-      relations: { executions: true },
-      order: { 
-        updatedAt: "DESC",
-        executions: { startedAt: "DESC" }
-      }
-    });
-    
-    // Add last execution info to each workflow
-    const workflowsWithStatus = workflows.map(wf => {
-      const lastExecution = wf.executions?.[0]; // First item is already the latest due to DESC order
-      
-      return {
-        ...wf,
-        status: lastExecution?.status || 'idle',
-        lastRun: lastExecution?.startedAt,
-        lastExecutionId: lastExecution?.id
-      };
-    });
-    
-    return res.json(workflowsWithStatus);
+    const workflows = await workflowService.getAllWorkflows();
+    return res.json(workflows);
   } catch (e) {
     console.error("GET /workflows failed:", e);
     return res.status(500).json({ error: "failed_to_get_workflows" });
+  }
+});
+
+/**
+ * POST /api/workflows
+ * Creates a new workflow with the provided configuration.
+ * Body: { name: string, description?: string, config?: object }
+ */
+router.post("/", async (req, res) => {
+  try {
+    const { name, description, config } = req.body;
+    
+    if (!name?.trim()) {
+      return res.status(400).json({ error: "Workflow name is required" });
+    }
+
+    const workflow = await workflowService.createWorkflow({
+      name,
+      description,
+      config
+    });
+
+    return res.status(201).json(workflow);
+  } catch (e) {
+    console.error("POST /workflows failed:", e);
+    if (e.message.includes("Required connectors not found")) {
+      return res.status(400).json({ error: "missing_connectors", message: e.message });
+    }
+    return res.status(500).json({ error: "failed_to_create_workflow", message: e.message });
   }
 });
 
@@ -50,49 +58,67 @@ router.get("/:id", async (req, res) => {
     if (!Number.isInteger(id))
       return res.status(400).json({ error: "invalid_id" });
 
-    const wfRepo = AppDataSource.getRepository("Workflow");
-    const wf = await wfRepo.findOne({
-      where: { id },
-      relations: { connectors: true, executions: true },
-      order: { executions: { startedAt: "DESC" } }
-    });
-
-    if (!wf) return res.status(404).json({ error: "workflow_not_found" });
-
-    // Get last execution (first item is already the latest due to DESC order)
-    const lastExecution = wf.executions?.[0];
-
-    // shape it a bit for the client
-    return res.json({
-      id: wf.id,
-      name: wf.name,
-      description: wf.description,
-      isActive: wf.isActive,
-      config: wf.config || null,
-      connectors: (wf.connectors || []).map((c) => ({
-        id: c.id,
-        key: c.key,
-        name: c.name,
-        type: c.type,
-      })),
-      status: lastExecution?.status || 'idle',
-      lastRun: lastExecution?.startedAt,
-      lastExecution: lastExecution ? {
-        id: lastExecution.id,
-        status: lastExecution.status,
-        startedAt: lastExecution.startedAt,
-        completedAt: lastExecution.completedAt,
-        executionLog: lastExecution.executionLog,
-        finalResult: lastExecution.finalResult,
-        errorMessage: lastExecution.errorMessage,
-        failedStepId: lastExecution.failedStepId
-      } : null,
-      updatedAt: wf.updatedAt,
-      createdAt: wf.createdAt,
-    });
+    const workflow = await workflowService.getWorkflow(id);
+    return res.json(workflow);
   } catch (e) {
     console.error("GET /workflows/:id failed:", e);
+    if (e.message === "Workflow not found") {
+      return res.status(404).json({ error: "workflow_not_found" });
+    }
     return res.status(500).json({ error: "failed_to_get_workflow" });
+  }
+});
+
+/**
+ * PUT /api/workflows/:id
+ * Updates workflow name, description, or config.
+ * Body: { name?: string, description?: string, config?: object }
+ */
+router.put("/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id))
+      return res.status(400).json({ error: "invalid_id" });
+
+    const { name, description, config } = req.body;
+    
+    const updatedWorkflow = await workflowService.updateWorkflow(id, {
+      name,
+      description, 
+      config
+    });
+
+    return res.json(updatedWorkflow);
+  } catch (e) {
+    console.error("PUT /workflows/:id failed:", e);
+    if (e.message === "Workflow not found") {
+      return res.status(404).json({ error: "workflow_not_found" });
+    }
+    if (e.message.includes("Required connectors not found")) {
+      return res.status(400).json({ error: "missing_connectors", message: e.message });
+    }
+    return res.status(500).json({ error: "failed_to_update_workflow", message: e.message });
+  }
+});
+
+/**
+ * DELETE /api/workflows/:id
+ * Deletes a workflow by ID.
+ */
+router.delete("/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id))
+      return res.status(400).json({ error: "invalid_id" });
+
+    await workflowService.deleteWorkflow(id);
+    return res.status(204).send(); // No content response for successful deletion
+  } catch (e) {
+    console.error("DELETE /workflows/:id failed:", e);
+    if (e.message === "Workflow not found") {
+      return res.status(404).json({ error: "workflow_not_found" });
+    }
+    return res.status(500).json({ error: "failed_to_delete_workflow", message: e.message });
   }
 });
 
@@ -108,109 +134,29 @@ router.post("/:id/run", async (req, res) => {
     if (!Number.isInteger(id))
       return res.status(400).json({ error: "invalid_id" });
 
-    const wfRepo = AppDataSource.getRepository("Workflow");
-    const connRepo = AppDataSource.getRepository("Connector");
-
-    const wf = await wfRepo.findOne({
-      where: { id, isActive: true },
-      relations: { connectors: true },
-    });
-    if (!wf)
-      return res.status(404).json({ error: "workflow_not_found_or_inactive" });
-
-    const config = wf.config || {};
-    const steps = Array.isArray(config?.steps) ? config.steps : [];
-    const wantedKeys = Array.from(
-      new Set(steps.map((s) => s?.type).filter(Boolean))
-    );
-
-    // If the workflow has no bound connectors yet, we *could* loosely fetch by key,
-    // but safest is to require bindings to exist.
-    const boundKeys = new Set((wf.connectors || []).map((c) => c.key));
-
-    // If any wanted key is not bound, try to load them from DB to give a better error
-    const missing = wantedKeys.filter((k) => !boundKeys.has(k));
-    if (missing.length) {
-      // Optionally: attempt to resolve them
-      const found = await connRepo.find({ where: { key: In(missing) } });
-      const foundKeys = new Set(found.map((f) => f.key));
-      const stillMissing = missing.filter((k) => !foundKeys.has(k));
-      if (stillMissing.length) {
-        return res.status(400).json({
-          error: "missing_required_connectors",
-          details: { missing: stillMissing },
-        });
-      }
-      // We have them in DB but not bound to the workflow — you can choose to:
-      //  (A) fail (enforce explicit binding), or
-      //  (B) run anyway using the fetched connectors (no DB write).
-      // Here we choose (A) for safety:
-      return res.status(400).json({
-        error: "connectors_not_bound",
-        details: {
-          needed: missing,
-          message: "Bind these connectors to the workflow first.",
-        },
-      });
-    }
-
-    // Merge secrets: workflow config -> env -> request body
-    const secrets = {
-      ...(config.secrets || {}), // from workflow.config.secrets
-      OPENAI_KEY: process.env.OPENAI_KEY || undefined,
-      ...(req.body?.secrets || {}),
-    };
-
-    // Minimal shape that executor likely expects
-    const workflowForRun = {
-      id: wf.id,
-      name: wf.name,
-      config: config,
-      connectors: wf.connectors.map((c) => ({
-        id: c.id,
-        key: c.key,
-        name: c.name,
-        type: c.type,
-        config: c.config || null,
-      })),
-    };
-
-    // Create execution record
-    const executionRepo = AppDataSource.getRepository("WorkflowExecution");
-    const execution = await executionRepo.save({
-      workflowId: wf.id,
-      status: "running",
-      startedAt: new Date()
-    });
-
-    try {
-      const result = await executeWorkflow(workflowForRun, secrets);
-      
-      // Update execution with results
-      await executionRepo.update(execution.id, {
-        status: result.failedStepId ? "error" : "success",
-        completedAt: new Date(),
-        executionLog: result.executionLog,
-        finalResult: result.final,
-        errorMessage: result.failedStepId ? `Failed at step: ${result.failedStepId}` : null,
-        failedStepId: result.failedStepId || null
-      });
-      
-      return res.json({
-        ...result,
-        executionId: execution.id
-      });
-    } catch (error) {
-      // Update execution with error
-      await executionRepo.update(execution.id, {
-        status: "error",
-        completedAt: new Date(),
-        errorMessage: error.message
-      });
-      throw error;
-    }
+    const result = await workflowService.runWorkflow(id, req.body?.secrets);
+    return res.json(result);
   } catch (e) {
     console.error("POST /workflows/:id/run failed:", e);
+    
+    if (e.message.includes("not found") || e.message.includes("inactive")) {
+      return res.status(404).json({ error: "workflow_not_found_or_inactive" });
+    }
+    
+    if (e.message.includes("Missing required connectors")) {
+      return res.status(400).json({ 
+        error: "missing_required_connectors", 
+        message: e.message 
+      });
+    }
+    
+    if (e.message.includes("not bound")) {
+      return res.status(400).json({ 
+        error: "connectors_not_bound", 
+        message: e.message 
+      });
+    }
+    
     return res.status(500).json({ error: "run_failed", message: e.message });
   }
 });

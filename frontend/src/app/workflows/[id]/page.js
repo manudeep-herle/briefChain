@@ -4,18 +4,25 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "../../../components/Button";
 import { Loader } from "../../../components/Loader";
+import { PageHeader } from "../../../components/PageHeader";
+import { EditableTitle } from "../../../components/EditableTitle";
+import {
+  Breadcrumb,
+  createWorkflowBreadcrumbs,
+} from "../../../components/Breadcrumb";
 
 function WorkflowDetails() {
   const params = useParams();
   const router = useRouter();
   const workflowId = params.id;
-  
+
   const [workflow, setWorkflow] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastResult, setLastResult] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [pollingInterval, setPollingInterval] = useState(null);
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
 
   const fetchWorkflowDetails = async () => {
     try {
@@ -27,23 +34,23 @@ function WorkflowDetails() {
       }
       const data = await response.json();
       setWorkflow(data);
-      
+
       // Set last result if available from previous execution
       if (data.lastExecution) {
         setLastResult({
           executionLog: data.lastExecution.executionLog,
           final: data.lastExecution.finalResult,
-          failedStepId: data.lastExecution.failedStepId
+          failedStepId: data.lastExecution.failedStepId,
         });
       }
-      
+
       // Check if workflow is running and start polling if needed
-      if (data.status === 'running' && !pollingInterval) {
+      if (data.status === "running" && !pollingInterval) {
         startPolling();
-      } else if (data.status !== 'running' && pollingInterval) {
+      } else if (data.status !== "running" && pollingInterval) {
         stopPolling();
       }
-      
+
       setError(null);
       return data;
     } catch (error) {
@@ -57,15 +64,15 @@ function WorkflowDetails() {
 
   const startPolling = () => {
     if (pollingInterval) return; // Already polling
-    
+
     const interval = setInterval(async () => {
       const data = await fetchWorkflowDetails();
-      if (data && data.status !== 'running') {
+      if (data && data.status !== "running") {
         stopPolling();
         setIsRunning(false);
       }
     }, 2000); // Poll every 2 seconds
-    
+
     setPollingInterval(interval);
   };
 
@@ -79,7 +86,7 @@ function WorkflowDetails() {
   useEffect(() => {
     if (!workflowId) return;
     fetchWorkflowDetails();
-    
+
     // Cleanup polling on unmount
     return () => stopPolling();
   }, [workflowId]);
@@ -87,14 +94,14 @@ function WorkflowDetails() {
   const handleRunWorkflow = async () => {
     try {
       setIsRunning(true);
-      setWorkflow(prev => ({ ...prev, status: 'running' }));
-      
+      setWorkflow((prev) => ({ ...prev, status: "running" }));
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/workflows/${workflowId}/run`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({}),
         }
@@ -106,23 +113,52 @@ function WorkflowDetails() {
 
       // Start polling for status updates
       startPolling();
-      
+
       const result = await response.json();
       setLastResult(result);
-      setWorkflow(prev => ({
+      setWorkflow((prev) => ({
         ...prev,
-        status: result.failedStepId ? 'error' : 'success',
-        lastRun: new Date().toISOString()
+        status: result.failedStepId ? "error" : "success",
+        lastRun: new Date().toISOString(),
       }));
-      
+
       // Stop polling since we have the final result
       stopPolling();
     } catch (error) {
-      console.error('Failed to run workflow:', error);
-      setWorkflow(prev => ({ ...prev, status: 'error' }));
+      console.error("Failed to run workflow:", error);
+      setWorkflow((prev) => ({ ...prev, status: "error" }));
       stopPolling();
     } finally {
       setIsRunning(false);
+    }
+  };
+
+  const handleUpdateWorkflowName = async (newName) => {
+    setIsUpdatingName(true);
+    console.log("Here");
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/workflows/${workflowId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: newName }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to update workflow name: ${response.status}`);
+      }
+
+      const updatedWorkflow = await response.json();
+      setWorkflow((prev) => ({ ...prev, name: updatedWorkflow.name }));
+    } catch (error) {
+      console.error("Failed to update workflow name:", error);
+      throw error; // Re-throw to let EditableTitle handle the error
+    } finally {
+      setIsUpdatingName(false);
     }
   };
 
@@ -135,11 +171,13 @@ function WorkflowDetails() {
 
   const downloadResults = () => {
     if (lastResult?.final?.markdown) {
-      const blob = new Blob([lastResult.final.markdown], { type: 'text/markdown' });
+      const blob = new Blob([lastResult.final.markdown], {
+        type: "text/markdown",
+      });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `${workflow?.name || 'workflow'}-results.md`;
+      a.download = `${workflow?.name || "workflow"}-results.md`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -149,15 +187,19 @@ function WorkflowDetails() {
 
   const getStatusBadge = (status) => {
     const statusColors = {
-      running: 'bg-blue-100 text-blue-800',
-      success: 'bg-green-100 text-green-800',
-      error: 'bg-red-100 text-red-800',
-      idle: 'bg-gray-100 text-gray-800'
+      running: "bg-blue-100 text-blue-800",
+      success: "bg-green-100 text-green-800",
+      error: "bg-red-100 text-red-800",
+      idle: "bg-gray-100 text-gray-800",
     };
-    
+
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[status] || statusColors.idle}`}>
-        {status || 'idle'}
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-medium ${
+          statusColors[status] || statusColors.idle
+        }`}
+      >
+        {status || "idle"}
       </span>
     );
   };
@@ -172,15 +214,11 @@ function WorkflowDetails() {
 
   if (error) {
     return (
-      <div className="text-red-600 p-4">
-        <p>{error}</p>
-        <Button 
-          onClick={() => router.back()}
-          variant="outline"
-          className="mt-2"
-        >
-          Go Back
-        </Button>
+      <div>
+        <Breadcrumb items={createWorkflowBreadcrumbs()} />
+        <div className="text-red-600 p-4">
+          <p>{error}</p>
+        </div>
       </div>
     );
   }
@@ -190,32 +228,39 @@ function WorkflowDetails() {
   }
 
   return (
-    <div className="p-6">
+    <div>
+      {/* Breadcrumbs */}
+      <Breadcrumb items={createWorkflowBreadcrumbs(workflow.name)} />
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Button 
-            onClick={() => router.back()}
-            variant="ghost"
-            size="sm"
-          >
-            ← Back
-          </Button>
-          <div>
+      <div className="ui-divider bg-white px-6 -mx-6 mb-6">
+        <PageHeader
+          title={
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">{workflow.name}</h1>
+              <EditableTitle
+                title={workflow.name}
+                onSave={handleUpdateWorkflowName}
+                isLoading={isUpdatingName}
+              />
               {getStatusBadge(workflow.status)}
             </div>
-            <p className="text-gray-600 mt-1">{workflow.description}</p>
-          </div>
-        </div>
-        <Button
-          onClick={handleRunWorkflow}
-          disabled={isRunning || workflow.status === 'running'}
-          variant={isRunning || workflow.status === 'running' ? 'secondary' : 'default'}
+          }
+          description={workflow.description}
         >
-          {isRunning || workflow.status === 'running' ? 'Running...' : 'Run Workflow'}
-        </Button>
+          <Button
+            onClick={handleRunWorkflow}
+            disabled={isRunning || workflow.status === "running"}
+            variant={
+              isRunning || workflow.status === "running"
+                ? "secondary"
+                : "default"
+            }
+          >
+            {isRunning || workflow.status === "running"
+              ? "Running..."
+              : "Run Workflow"}
+          </Button>
+        </PageHeader>
       </div>
 
       {/* Main Layout: 2/3 Results + 1/3 Steps */}
@@ -233,8 +278,18 @@ function WorkflowDetails() {
                     size="sm"
                     className="flex items-center gap-1"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
                     </svg>
                     Copy
                   </Button>
@@ -244,31 +299,49 @@ function WorkflowDetails() {
                     size="sm"
                     className="flex items-center gap-1"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
                     </svg>
                     Download
                   </Button>
                 </div>
               )}
             </div>
-            
+
             <div className="min-h-96">
-              {isRunning || workflow.status === 'running' ? (
+              {isRunning || workflow.status === "running" ? (
                 <div className="flex items-center justify-center h-96">
                   <div className="text-center">
-                    <Loader variant="wave" size="lg" text="Workflow is running..." />
+                    <Loader
+                      variant="wave"
+                      size="lg"
+                      text="Workflow is running..."
+                    />
                   </div>
                 </div>
               ) : lastResult ? (
                 <div className="space-y-4">
                   {lastResult.failedStepId && (
                     <div className="bg-red-50 border border-red-200 p-4 rounded">
-                      <h3 className="font-medium text-red-800 mb-2">Execution Failed</h3>
-                      <p className="text-red-700 text-sm">Failed at step: {lastResult.failedStepId}</p>
+                      <h3 className="font-medium text-red-800 mb-2">
+                        Execution Failed
+                      </h3>
+                      <p className="text-red-700 text-sm">
+                        Failed at step: {lastResult.failedStepId}
+                      </p>
                     </div>
                   )}
-                  
+
                   {lastResult.final?.markdown ? (
                     <div className="bg-gray-50 p-4 rounded border">
                       <h3 className="font-medium mb-2">Generated Summary</h3>
@@ -277,20 +350,31 @@ function WorkflowDetails() {
                       </pre>
                     </div>
                   ) : (
-                    <p className="text-gray-600">No markdown results available.</p>
+                    <p className="text-gray-600">
+                      No markdown results available.
+                    </p>
                   )}
-                  
+
                   {lastResult.executionLog && (
                     <div className="mt-4">
                       <h3 className="font-medium mb-2">Execution Log</h3>
                       <div className="space-y-2">
                         {lastResult.executionLog.map((log, index) => (
-                          <div key={index} className="bg-gray-50 p-3 rounded border text-sm">
+                          <div
+                            key={index}
+                            className="bg-gray-50 p-3 rounded border text-sm"
+                          >
                             <div className="flex justify-between items-center">
-                              <span className="font-medium">{log.stepId}: {log.type}</span>
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                log.status === 'ok' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                              }`}>
+                              <span className="font-medium">
+                                {log.stepId}: {log.type}
+                              </span>
+                              <span
+                                className={`px-2 py-1 rounded text-xs ${
+                                  log.status === "ok"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
                                 {log.status}
                               </span>
                             </div>
@@ -298,7 +382,9 @@ function WorkflowDetails() {
                               Duration: {log.durationMs}ms
                             </div>
                             {log.error && (
-                              <div className="text-red-600 mt-1">Error: {log.error}</div>
+                              <div className="text-red-600 mt-1">
+                                Error: {log.error}
+                              </div>
                             )}
                           </div>
                         ))}
@@ -309,7 +395,9 @@ function WorkflowDetails() {
               ) : workflow.lastExecution ? (
                 <div className="text-center text-gray-500 py-8">
                   <p>Previous execution results are loaded above.</p>
-                  <p className="text-sm mt-2">Run the workflow again to see new results.</p>
+                  <p className="text-sm mt-2">
+                    Run the workflow again to see new results.
+                  </p>
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-96">
@@ -328,7 +416,10 @@ function WorkflowDetails() {
             <h2 className="text-lg font-semibold mb-4">Workflow Steps</h2>
             <div className="space-y-3">
               {workflow.config?.steps?.map((step, index) => (
-                <div key={step.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded">
+                <div
+                  key={step.id}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded"
+                >
                   <div className="w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-medium">
                     {index + 1}
                   </div>

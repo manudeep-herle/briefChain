@@ -3,6 +3,10 @@ import { useState, useEffect } from "react";
 import { PageHeader } from "../../components/PageHeader";
 import { Button } from "../../components/Button";
 import { Loader } from "../../components/Loader";
+import {
+  Breadcrumb,
+  createConnectorBreadcrumbs,
+} from "../../components/Breadcrumb";
 
 function Connectors() {
   const [connectors, setConnectors] = useState([]);
@@ -58,25 +62,40 @@ function Connectors() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-32">
-        <Loader variant="bars" text="Loading connectors..." />
+      <div>
+        <Breadcrumb items={createConnectorBreadcrumbs()} />
+        <div className="flex justify-center items-center h-32">
+          <Loader variant="bars" text="Loading connectors..." />
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-red-600 p-4">Error loading connectors: {error}</div>
+      <div>
+        <Breadcrumb items={createConnectorBreadcrumbs()} />
+        <div className="text-red-600 p-4">
+          Error loading connectors: {error}
+        </div>
+      </div>
     );
   }
 
   if (!connectors || connectors.length === 0) {
-    return <div className="p-4 text-gray-600">No connectors available.</div>;
+    return (
+      <div>
+        <Breadcrumb items={createConnectorBreadcrumbs()} />
+        <div className="p-4 text-gray-600">No connectors available.</div>
+      </div>
+    );
   }
 
   return (
     <div>
-      <PageHeader 
+      <Breadcrumb items={createConnectorBreadcrumbs()} />
+
+      <PageHeader
         title="Connectors"
         description="Available data connectors for workflow steps"
       >
@@ -87,10 +106,7 @@ function Connectors() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {connectors.map((connector) => (
-          <div
-            key={connector.id}
-            className="p-6 border border-gray-200 rounded-lg bg-white"
-          >
+          <div key={connector.id} className="p-6 ui-card">
             <div className="flex justify-between items-start mb-3">
               <h3 className="text-lg font-semibold">{connector.name}</h3>
               <span
@@ -112,7 +128,7 @@ function Connectors() {
                 {connector.key}
               </code>
             </div>
-
+            {/* 
             {connector.config && (
               <div className="mb-4">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">
@@ -132,7 +148,7 @@ function Connectors() {
                   )}
                 </div>
               </div>
-            )}
+            )} */}
 
             {/* <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
               <button 

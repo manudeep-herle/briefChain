@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "../../components/Button";
 import { Loader } from "../../components/Loader";
 import { PageHeader } from "../../components/PageHeader";
+import { Cog6ToothIcon } from "@heroicons/react/24/outline";
+import { Breadcrumb, createWorkflowBreadcrumbs } from "@/components/Breadcrumb";
+import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 
 function Workflows() {
   const router = useRouter();
@@ -12,6 +15,11 @@ function Workflows() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [settingsDropdown, setSettingsDropdown] = useState({});
+  const [deleteDialog, setDeleteDialog] = useState({
+    isOpen: false,
+    workflow: null,
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchWorkflows = async () => {
@@ -48,20 +56,18 @@ function Workflows() {
   const handleRunWorkflow = async (workflowId) => {
     try {
       // Optimistically update status to running
-      setWorkflows(prev => 
-        prev.map(wf => 
-          wf.id === workflowId 
-            ? { ...wf, status: 'running' }
-            : wf
+      setWorkflows((prev) =>
+        prev.map((wf) =>
+          wf.id === workflowId ? { ...wf, status: "running" } : wf
         )
       );
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/workflows/${workflowId}/run`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({}), // Can add secrets here if needed
         }
@@ -72,30 +78,28 @@ function Workflows() {
       }
 
       const result = await response.json();
-      
+
       // Update workflow with success status and last run time
-      setWorkflows(prev => 
-        prev.map(wf => 
-          wf.id === workflowId 
-            ? { 
-                ...wf, 
-                status: result.failedStepId ? 'error' : 'success',
-                lastRun: new Date().toISOString()
+      setWorkflows((prev) =>
+        prev.map((wf) =>
+          wf.id === workflowId
+            ? {
+                ...wf,
+                status: result.failedStepId ? "error" : "success",
+                lastRun: new Date().toISOString(),
               }
             : wf
         )
       );
 
-      console.log('Workflow completed:', result);
+      console.log("Workflow completed:", result);
     } catch (error) {
-      console.error('Failed to run workflow:', error);
-      
+      console.error("Failed to run workflow:", error);
+
       // Update status to error
-      setWorkflows(prev => 
-        prev.map(wf => 
-          wf.id === workflowId 
-            ? { ...wf, status: 'error' }
-            : wf
+      setWorkflows((prev) =>
+        prev.map((wf) =>
+          wf.id === workflowId ? { ...wf, status: "error" } : wf
         )
       );
     }
@@ -112,9 +116,49 @@ function Workflows() {
   };
 
   const handleDeleteWorkflow = (workflowId) => {
-    console.log("Deleting workflow:", workflowId);
-    // TODO: Implement workflow deletion
-    setSettingsDropdown((prev) => ({ ...prev, [workflowId]: false }));
+    const workflow = workflows.find((wf) => wf.id === workflowId);
+    if (workflow) {
+      setDeleteDialog({ isOpen: true, workflow });
+      // Close the settings dropdown
+      setSettingsDropdown((prev) => ({ ...prev, [workflowId]: false }));
+    }
+  };
+
+  const confirmDeleteWorkflow = async () => {
+    if (!deleteDialog.workflow) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/workflows/${deleteDialog.workflow.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete workflow: ${response.status}`);
+      }
+
+      // Remove workflow from local state
+      setWorkflows((prev) =>
+        prev.filter((wf) => wf.id !== deleteDialog.workflow.id)
+      );
+
+      console.log(
+        `Workflow "${deleteDialog.workflow.name}" deleted successfully`
+      );
+    } catch (error) {
+      console.error("Failed to delete workflow:", error);
+      setError(`Failed to delete workflow: ${error.message}`);
+      throw error; // Re-throw to prevent dialog from closing
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const closeDeleteDialog = () => {
+    setDeleteDialog({ isOpen: false, workflow: null });
   };
 
   const getStatusBadge = (status) => {
@@ -144,7 +188,7 @@ function Workflows() {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
-    
+
     if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
@@ -172,14 +216,13 @@ function Workflows() {
 
   return (
     <div>
-      <PageHeader 
+      <Breadcrumb items={createWorkflowBreadcrumbs()} />
+
+      <PageHeader
         title="Workflows"
         description="Manage and execute your automated workflows"
       >
-        <Button 
-          variant="default"
-          onClick={() => router.push("/workflows/new")}
-        >
+        <Button variant="default" onClick={() => router.push("/workflows/new")}>
           New Workflow
         </Button>
       </PageHeader>
@@ -188,99 +231,99 @@ function Workflows() {
         {workflows.map((workflow) => (
           <div
             key={workflow.id}
-            className="p-6 ui-card"
+            className="p-6 ui-card flex flex-col justify-between"
           >
-            <div className="flex justify-between items-start mb-3">
-              <h3 className="text-lg font-semibold">{workflow.name}</h3>
-              {getStatusBadge(workflow.status)}
+            <div>
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="text-lg font-semibold">{workflow.name}</h3>
+                {getStatusBadge(workflow.status)}
+              </div>
+
+              <p className="text-gray-600 mb-4 text-sm">
+                {workflow.description || "No description available"}
+              </p>
+
+              <div className="space-y-2 mb-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Steps:</span>
+                  <span className="font-medium">
+                    {workflow.config?.steps?.length || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Last Run:</span>
+                  <span className="font-medium">
+                    {formatLastRun(workflow.lastRun)}
+                  </span>
+                </div>
+              </div>
             </div>
-
-            <p className="text-gray-600 mb-4 text-sm">
-              {workflow.description || "No description available"}
-            </p>
-
-            <div className="space-y-2 mb-4 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Steps:</span>
-                <span className="font-medium">
-                  {workflow.config?.steps?.length || 0}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Last Run:</span>
-                <span className="font-medium">
-                  {formatLastRun(workflow.lastRun)}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => handleOpenWorkflow(workflow.id)}
-                  variant="outline"
-                  size="sm"
-                >
-                  Open
-                </Button>
-                <Button
-                  onClick={() => handleRunWorkflow(workflow.id)}
-                  disabled={workflow.status === 'running'}
-                  variant={workflow.status === 'running' ? 'secondary' : 'default'}
-                  size="sm"
-                >
-                  {workflow.status === 'running' ? 'Running...' : 'Run'}
-                </Button>
-              </div>
-
-              <div className="relative">
-                <button
-                  onClick={() => toggleSettingsDropdown(workflow.id)}
-                  className="p-1 hover:bg-gray-100 rounded"
-                  title="Settings"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleOpenWorkflow(workflow.id)}
+                    variant="outline"
+                    size="sm"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                </button>
+                    Open
+                  </Button>
+                  <Button
+                    onClick={() => handleRunWorkflow(workflow.id)}
+                    disabled={workflow.status === "running"}
+                    variant={
+                      workflow.status === "running" ? "secondary" : "default"
+                    }
+                    size="sm"
+                  >
+                    {workflow.status === "running" ? "Running..." : "Run"}
+                  </Button>
+                </div>
 
-                {settingsDropdown[workflow.id] && (
-                  <div className="absolute right-0 mt-1 w-32 bg-white border-ui rounded shadow-lg z-10">
-                    <button
-                      onClick={() => handleSecretsSettings(workflow.id)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
-                    >
-                      Secrets
-                    </button>
-                    <button
-                      onClick={() => handleDeleteWorkflow(workflow.id)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-red-600"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
+                <div className="relative">
+                  <button
+                    onClick={() => toggleSettingsDropdown(workflow.id)}
+                    className="p-1 hover:bg-gray-100 rounded"
+                    title="Settings"
+                  >
+                    <Cog6ToothIcon className="w-4 h-4" />
+                  </button>
+
+                  {settingsDropdown[workflow.id] && (
+                    <div className="absolute right-0 mt-1 w-32 bg-white border-ui rounded shadow-lg z-10">
+                      <button
+                        onClick={() => handleSecretsSettings(workflow.id)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
+                      >
+                        Secrets
+                      </button>
+                      <button
+                        onClick={() => handleDeleteWorkflow(workflow.id)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={closeDeleteDialog}
+        onConfirm={confirmDeleteWorkflow}
+        title="Delete Workflow"
+        message={`Are you sure you want to delete "${deleteDialog.workflow?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }
