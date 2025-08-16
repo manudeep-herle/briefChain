@@ -22,7 +22,7 @@ export default function RootLayout({ children }) {
           <main className="p-6 grow">
             <ClientShell>{children}</ClientShell>
           </main>
-          <footer className="flex justify-center">&copy; 2025 Conduit</footer>
+          {/* <footer className="flex justify-center">&copy; 2025 Conduit</footer> */}
         </div>
       </body>
     </html>

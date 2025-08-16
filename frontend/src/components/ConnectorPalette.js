@@ -25,8 +25,8 @@ function DraggableConnector({ connector }) {
   return (
     <div 
       ref={drag}
-      className={`p-3 bg-white rounded-lg border-ui hover:shadow-sm cursor-grab transition-shadow ${
-        isDragging ? 'opacity-50' : ''
+      className={`p-3 bg-white rounded-lg border-ui hover:shadow-sm transition-shadow ${
+        isDragging ? 'opacity-50 cursor-grabbing' : 'cursor-grab'
       }`}
     >
       <div className="flex items-center justify-between mb-2">

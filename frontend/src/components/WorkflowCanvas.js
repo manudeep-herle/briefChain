@@ -1,16 +1,25 @@
 import { useDrop } from 'react-dnd';
 import { Button } from "./Button";
+import Xarrow from 'react-xarrows';
 
 // Individual connector on the canvas
 function CanvasConnector({ connector, index, onRemove }) {
+  const style = connector.position.x === 'center' ? {
+    position: 'absolute',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    top: connector.position.y,
+  } : {
+    position: 'absolute',
+    left: connector.position.x,
+    top: connector.position.y,
+  };
+
   return (
     <div 
+      id={connector.canvasId}
       className="ui-card p-4 shadow-sm w-64"
-      style={{
-        position: 'absolute',
-        left: connector.position.x,
-        top: connector.position.y,
-      }}
+      style={style}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="font-medium text-sm">{connector.name}</div>
@@ -32,13 +41,6 @@ function CanvasConnector({ connector, index, onRemove }) {
         Step {index + 1}: {connector.type}
       </div>
       
-      {/* Connection point for next step */}
-      {index > 0 && (
-        <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full border-2 border-white" style={{backgroundColor: '#3b82f6'}}></div>
-      )}
-      
-      {/* Connection point for previous step */}
-      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full border-2 border-white" style={{backgroundColor: '#3b82f6'}}></div>
     </div>
   );
 }
@@ -53,15 +55,18 @@ function WorkflowCanvas({ connectors, onConnectorDrop, onRemoveConnector }) {
     collect: (monitor) => ({
       isOver: monitor.isOver(),
     }),
-  }));
+  }), [onConnectorDrop]);
 
   return (
-    <div className="flex-1 bg-white p-6">
+    <div className="flex-1 bg-white p-6 overflow-auto">
       <div 
         ref={drop}
-        className={`h-full border-2 border-dashed border-ui rounded-lg relative ${
+        className={`min-h-full border-2 border-dashed border-ui rounded-lg relative ${
           isOver ? 'border-blue-400 bg-blue-50' : 'border-gray-200'
         }`}
+        style={{
+          minHeight: connectors.length > 0 ? `${Math.max(600, 80 + connectors.length * 200 + 100)}px` : '100%'
+        }}
       >
         {connectors.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -82,45 +87,21 @@ function WorkflowCanvas({ connectors, onConnectorDrop, onRemoveConnector }) {
               />
             ))}
             
-            {/* Render connecting lines between connectors */}
-            {connectors.length > 1 && (
-              <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
-                {connectors.slice(1).map((connector, index) => {
-                  const prevConnector = connectors[index];
-                  const startX = prevConnector.position.x + 128; // Center of previous connector
-                  const startY = prevConnector.position.y + 80; // Bottom of previous connector
-                  const endX = connector.position.x + 128; // Center of current connector  
-                  const endY = connector.position.y - 10; // Top of current connector
-                  
-                  return (
-                    <line
-                      key={`line-${index}`}
-                      x1={startX}
-                      y1={startY}
-                      x2={endX}
-                      y2={endY}
-                      stroke="#3b82f6"
-                      strokeWidth="2"
-                      markerEnd="url(#arrowhead)"
-                    />
-                  );
-                })}
-                
-                {/* Arrow marker definition */}
-                <defs>
-                  <marker
-                    id="arrowhead"
-                    markerWidth="10"
-                    markerHeight="7"
-                    refX="9"
-                    refY="3.5"
-                    orient="auto"
-                  >
-                    <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
-                  </marker>
-                </defs>
-              </svg>
-            )}
+            {/* Render connecting arrows between connectors using react-xarrows */}
+            {connectors.length > 1 && connectors.slice(1).map((connector, index) => (
+              <Xarrow
+                key={`arrow-${index}`}
+                start={connectors[index].canvasId}
+                end={connector.canvasId}
+                color="#3b82f6"
+                strokeWidth={3}
+                headSize={8}
+                showHead={true}
+                path="straight"
+                startAnchor="bottom"
+                endAnchor="top"
+              />
+            ))}
           </>
         )}
       </div>

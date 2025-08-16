@@ -53,11 +53,14 @@ function NewWorkflow() {
   };
 
   const handleConnectorDrop = (connector) => {
-    // Add connector to canvas with unique ID
+    // Add connector to canvas with unique ID - always center horizontally and stack vertically
     const newConnector = {
       ...connector,
       canvasId: `${connector.id}-${Date.now()}`, // Unique ID for canvas
-      position: { x: 100, y: 100 + canvasConnectors.length * 120 }, // Stack vertically
+      position: {
+        x: "center", // Will be centered in CSS
+        y: 80 + canvasConnectors.length * 200, // Stack vertically with 200px spacing
+      },
       parameters: {}, // Will be filled in dialog
     };
     setCanvasConnectors((prev) => [...prev, newConnector]);
