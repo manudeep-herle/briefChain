@@ -82,11 +82,8 @@ export default {
 
       console.log(`HTTP request completed with status: ${response.status}`);
 
-      // Throw error for non-2xx status codes if configured to do so
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
+      // Always return the result regardless of status code
+      // This allows workflows to analyze error responses (4xx, 5xx)
       return result;
     } catch (error) {
       if (error.name === 'AbortError') {
