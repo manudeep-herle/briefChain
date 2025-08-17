@@ -1,15 +1,7 @@
 const API_BASE = "https://api.github.com";
 
 export default {
-  type: "github.repoSummary",
-  title: "GitHub Repo Summary",
-  description:
-    "Fetch stars, forks, open issues/PRs, recent activity, and latest release for a GitHub repository.",
-  paramsSchema: {
-    owner: { type: "string", required: true, example: "facebook" },
-    repo: { type: "string", required: true, example: "react" },
-  },
-  async run(context, params, secrets) {
+  async run(context, params, secrets) { // eslint-disable-line no-unused-vars
     // fetch the metadata from the repository defined by owner and repo
     const url = `${API_BASE}/repos/${params.owner}/${params.repo}`;
     const headers = {

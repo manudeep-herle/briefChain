@@ -33,9 +33,14 @@ const DEFAULT_WORKFLOWS = [
         },
         {
           id: "s4",
-          type: "ai.summarizeBrief",
-          name: "AI Summarizer",
-          params: {},
+          type: "ai.engine",
+          name: "AI Engine",
+          params: {
+            prompt: "Create a concise daily brief for React maintainers. Include: TL;DR summary, key metrics (stars, downloads, security score), notable changes or trends, security highlights, and 3-5 specific action items. Focus on what maintainers need to know today.",
+            model: "gpt-4o-mini",
+            temperature: 0.2,
+            maxTokens: 1000
+          },
         },
       ],
       secrets: {

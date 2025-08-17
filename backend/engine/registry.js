@@ -1,7 +1,7 @@
 import githubRepoSummary from "../connectors/github.repoSummary.js";
 import npmDownloads from "../connectors/npm.downloads.js";
 import openssfScorecard from "../connectors/openssf.scorecard.js";
-import aiSummarizeBrief from "../connectors/ai.summarizeBrief.js";
+import aiEngine from "../connectors/ai.engine.js";
 import httpRequest from "../connectors/http.request.js";
 // import slackWebhook from "../connectors/slack.webhook.js";
 
@@ -19,8 +19,8 @@ const registry = {
     implementation: openssfScorecard,
     contextKey: "scorecard"
   },
-  "ai.summarizeBrief": {
-    implementation: aiSummarizeBrief,
+  "ai.engine": {
+    implementation: aiEngine,
     contextKey: "markdown", // special case: stores output.markdown
     specialHandling: true
   },

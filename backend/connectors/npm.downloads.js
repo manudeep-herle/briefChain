@@ -1,13 +1,7 @@
 const API_BASE = "https://api.npmjs.org/downloads/point/last-week/";
 
 export default {
-  type: "npm.downloads",
-  title: "NPM download statistics",
-  description: "Fetches download statistics for a specific NPM package",
-  paramsSchema: {
-    packageName: { type: "string", required: true, example: "react" },
-  },
-  async run(context, params, secrets) {
+  async run(context, params, secrets) { // eslint-disable-line no-unused-vars
     // add headers
     const headers = { "User-Agent": "briefchain" };
     if (secrets?.NPM_TOKEN) {

@@ -1,16 +1,7 @@
 const API_BASE = "https://api.securityscorecards.dev/projects/github.com";
 
 export default {
-  type: "openssf.scorecard",
-  title: "OpenSSF Scorecard",
-  description:
-    "Fetch security/health score and key checks for a GitHub repository.",
-  paramsSchema: {
-    owner: { type: "string", required: true, example: "facebook" },
-    repo: { type: "string", required: true, example: "react" },
-  },
-
-  async run(context, params, secrets) {
+  async run(context, params, secrets) { // eslint-disable-line no-unused-vars
     const { owner, repo } = params;
 
     // Minimal headers; User-Agent is polite and sometimes required
