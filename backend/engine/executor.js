@@ -1,28 +1,68 @@
-import registry, { getConnectorImplementation, getContextKey, hasSpecialHandling } from "./registry.js";
+import registry, {
+  getConnectorImplementation,
+  getContextKey,
+} from "./registry.js";
+
+// Template resolver function
+function resolveTemplates(params, context) {
+  const resolved = JSON.parse(JSON.stringify(params)); // Deep clone
+
+  function replaceTemplates(obj) {
+    if (typeof obj === "string") {
+      // Replace {{step1.output}}, {{repoSummary.stars}}, etc.
+      return obj.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+        const keys = path.trim().split(".");
+        let value = context;
+
+        for (const key of keys) {
+          value = value?.[key];
+        }
+
+        return value !== undefined ? value : match; // Keep original if not found
+      });
+    } else if (Array.isArray(obj)) {
+      return obj.map(replaceTemplates);
+    } else if (obj && typeof obj === "object") {
+      const result = {};
+      for (const [key, val] of Object.entries(obj)) {
+        result[key] = replaceTemplates(val);
+      }
+      return result;
+    }
+
+    return obj;
+  }
+
+  return replaceTemplates(resolved);
+}
 
 export default async function executeWorkflow(workflow, secrets) {
   const executionLog = [];
   const context = {}; // accumulates normalized outputs for later steps
 
   try {
-    console.log(`Starting workflow execution: ${workflow.name} (ID: ${workflow.id})`);
-    
+    console.log("\n" + "=".repeat(60));
+    console.log(
+      `Starting workflow execution: ${workflow.name} (ID: ${workflow.id})`
+    );
+    console.log("=".repeat(60));
+
     // Handle both old format (workflow.steps) and new format (workflow.config.steps)
     const steps = workflow.steps || workflow.config?.steps || [];
-    
+
     if (!steps.length) {
-      const error = 'No steps found in workflow';
+      const error = "No steps found in workflow";
       console.error(`Workflow execution failed: ${error}`);
       throw new Error(error);
     }
 
-    console.log(`Executing ${steps.length} steps for workflow: ${workflow.name}`);
-
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
       const start = Date.now();
-      
-      console.log(`Executing step ${i + 1}/${steps.length}: ${step.type} (${step.id})`);
+
+      console.log(
+        `Executing step ${i + 1}/${steps.length}: ${step.type} (${step.id})`
+      );
 
       const connector = getConnectorImplementation(step.type);
       if (!connector) {
@@ -32,24 +72,43 @@ export default async function executeWorkflow(workflow, secrets) {
       }
 
       try {
-        const stepParams = step.params || step.parameters || {};
-        console.log(`Running connector ${step.type} with params:`, safePreview(stepParams));
-        
-        // Call connector with (input, params, secrets) — input = current context
-        const output = await connector.run(context, stepParams, secrets);
-        
-        console.log(`Step ${step.id} completed successfully in ${Date.now() - start}ms`);
+        const rawParams = step.params || step.parameters || {};
 
-        // Store normalized outputs for later steps using registry mapping
+        // Resolve template variables like {{repoSummary.stars}} before running
+        const resolvedParams = resolveTemplates(rawParams, context);
+
+        console.log(
+          `Running connector ${step.type} with params:`,
+          safePreview(resolvedParams)
+        );
+        if (JSON.stringify(rawParams) !== JSON.stringify(resolvedParams)) {
+          console.log(`Templates resolved:`, {
+            before: safePreview(rawParams),
+            after: safePreview(resolvedParams),
+          });
+        }
+
+        // Call connector with (input, params, secrets) — input = current context
+        const output = await connector.run(context, resolvedParams, secrets);
+
+        console.log(
+          `Step ${step.id} completed successfully in ${Date.now() - start}ms`
+        );
+
+        // Store outputs in multiple ways for flexible access
+
+        // 1. Step-based access: context.step1, context.step2, etc.
+        context[step.id] = { output };
+
+        // 2. Legacy context key access for backward compatibility
         const contextKey = getContextKey(step.type);
         if (contextKey) {
-          if (hasSpecialHandling(step.type)) {
-            // Special case: store the markdown field from output for AI connectors
-            context[contextKey] = output?.markdown || "";
-          } else {
-            context[contextKey] = output;
-          }
-          console.log(`Stored output in context.${contextKey}`);
+          context[contextKey] = output;
+          console.log(
+            `Stored output in context.${contextKey} and context.${step.id}`
+          );
+        } else {
+          console.log(`Stored output in context.${step.id}`);
         }
 
         executionLog.push({
@@ -62,9 +121,12 @@ export default async function executeWorkflow(workflow, secrets) {
         });
       } catch (err) {
         const duration = Date.now() - start;
-        console.error(`Step ${step.id} (${step.type}) failed after ${duration}ms:`, err.message);
-        console.error('Step error details:', err);
-        
+        console.error(
+          `Step ${step.id} (${step.type}) failed after ${duration}ms:`,
+          err.message
+        );
+        console.error("Step error details:", err);
+
         executionLog.push({
           stepId: step.id,
           type: step.type,
@@ -74,19 +136,22 @@ export default async function executeWorkflow(workflow, secrets) {
         });
 
         // For now: stop on first error . Remove this return to continue-on-error.
-        console.log(`Workflow execution stopped due to failed step: ${step.id}`);
+        console.log(
+          `Workflow execution stopped due to failed step: ${step.id}`
+        );
         return { failedStepId: step.id, executionLog, final: context };
       }
     }
 
-    console.log(`Workflow ${workflow.name} completed successfully with ${steps.length} steps`);
+    console.log(
+      `Workflow ${workflow.name} completed successfully with ${steps.length} steps`
+    );
     return { executionLog, final: context };
   } catch (error) {
     console.error(`Workflow execution failed for ${workflow.name}:`, error);
     throw error;
   }
 }
-
 
 function safePreview(obj) {
   try {

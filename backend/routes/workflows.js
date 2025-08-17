@@ -55,6 +55,8 @@ router.post("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
+    console.log(`🔍 GET /workflows/${req.params.id} - Parsed ID: ${id}`);
+    
     if (!Number.isInteger(id))
       return res.status(400).json({ error: "invalid_id" });
 

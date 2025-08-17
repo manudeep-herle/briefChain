@@ -21,8 +21,7 @@ const registry = {
   },
   "ai.engine": {
     implementation: aiEngine,
-    contextKey: "markdown", // special case: stores output.markdown
-    specialHandling: true
+    contextKey: "aiResponse"
   },
   "http.request": {
     implementation: httpRequest,
@@ -44,9 +43,5 @@ export function getContextKey(type) {
   return registry[type]?.contextKey || null;
 }
 
-// Helper function to check if connector needs special handling
-export function hasSpecialHandling(type) {
-  return registry[type]?.specialHandling || false;
-}
 
 export default registry;

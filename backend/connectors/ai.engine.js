@@ -7,7 +7,7 @@ export default {
     if (!secrets?.OPENAI_KEY) {
       console.error("Missing OPENAI_KEY");
       return {
-        markdown: "# Analysis\n\n(OpenAI key missing — stub output)",
+        content: "OpenAI key missing — stub output",
         stub: true,
       };
     }
@@ -16,20 +16,25 @@ export default {
       apiKey: secrets.OPENAI_KEY,
     });
 
-    // Use custom prompt or fall back to default OSS maintainer brief
-    const systemPrompt = params.prompt || 
-      `You create concise daily briefs for open-source maintainers.
-Return Markdown with sections: TL;DR, Key Metrics, Notable Changes, Security, and 3–5 Action Items.
-Be specific and short.`;
-
-    // Create user message with all available context
-    const contextData = {
-      ...context, // Include all context data (repoSummary, downloads, scorecard, httpResponse, etc.)
-    };
+    // Generic system prompt for general-purpose AI engine
+    const systemPrompt = "You are a helpful AI assistant. Provide accurate, concise responses based on the given information and instructions.";
     
-    const userMessage = params.prompt 
-      ? `Analyze this data according to the given instructions:\n${JSON.stringify(contextData, null, 2)}`
-      : `Generate the brief from this JSON:\n${JSON.stringify(contextData, null, 2)}`;
+    // Determine if we need to include context data
+    const hasContextData = Object.keys(context).length > 0;
+    
+    let userMessage;
+    if (hasContextData && params.prompt) {
+      // Include context data with custom prompt
+      userMessage = `${params.prompt}\n\nAvailable data:\n${JSON.stringify(context, null, 2)}`;
+    } else if (params.prompt) {
+      // Just the prompt without context (for simple questions)
+      userMessage = params.prompt;
+    } else {
+      // Fallback: analyze available data generically
+      userMessage = hasContextData 
+        ? `Please analyze and summarize this data:\n${JSON.stringify(context, null, 2)}`
+        : "No specific instructions provided.";
+    }
 
     try {
       const res = await openai.chat.completions.create(
@@ -45,14 +50,14 @@ Be specific and short.`;
         { timeout: 15000 }
       );
       
-      const markdown = res.choices?.[0]?.message?.content || "# Analysis\n\n(No content generated)";
+      const content = res.choices?.[0]?.message?.content || "No content generated";
       
-      console.log(`Generated AI analysis: ${markdown.substring(0, 200)}...`);
-      return { markdown, stub: false };
+      console.log(`Generated AI content: ${content.substring(0, 200)}...`);
+      return { content, stub: false };
     } catch (error) {
       console.error("OpenAI request failed:", error);
       return {
-        markdown: `# Analysis\n\n(OpenAI request failed: ${error.message})`,
+        content: `AI request failed: ${error.message}`,
         stub: true,
       };
     }

@@ -44,36 +44,33 @@ function WorkflowDetails() {
         });
       }
 
-      // Check if workflow is running and start polling if needed
-      if (data.status === "running" && !pollingInterval) {
-        startPolling();
-      } else if (data.status !== "running" && pollingInterval) {
-        stopPolling();
-      }
+      // No automatic polling needed - workflow runs are synchronous
 
       setError(null);
       return data;
     } catch (error) {
       console.error("Failed to fetch workflow details:", error);
-      setError("Failed to load workflow details. Please try again later.");
+      
+      // If workflow not found (404), stop polling and redirect
+      if (error.message.includes("404")) {
+        setError("Workflow not found");
+        stopPolling();
+        // Optionally redirect to workflows list after a delay
+        setTimeout(() => {
+          router.push("/workflows");
+        }, 3000);
+      } else {
+        setError("Failed to load workflow details. Please try again later.");
+      }
       return null;
     } finally {
       setLoading(false);
     }
   };
 
+  // Polling not needed for synchronous workflow execution
   const startPolling = () => {
-    if (pollingInterval) return; // Already polling
-
-    const interval = setInterval(async () => {
-      const data = await fetchWorkflowDetails();
-      if (data && data.status !== "running") {
-        stopPolling();
-        setIsRunning(false);
-      }
-    }, 2000); // Poll every 2 seconds
-
-    setPollingInterval(interval);
+    // No-op: workflow runs are synchronous
   };
 
   const stopPolling = () => {
@@ -111,9 +108,6 @@ function WorkflowDetails() {
         throw new Error(`Failed to run workflow: ${response.status}`);
       }
 
-      // Start polling for status updates
-      startPolling();
-
       const result = await response.json();
       setLastResult(result);
       setWorkflow((prev) => ({
@@ -127,6 +121,8 @@ function WorkflowDetails() {
     } catch (error) {
       console.error("Failed to run workflow:", error);
       setWorkflow((prev) => ({ ...prev, status: "error" }));
+      
+      // Stop polling on error too
       stopPolling();
     } finally {
       setIsRunning(false);
@@ -342,16 +338,16 @@ function WorkflowDetails() {
                     </div>
                   )}
 
-                  {lastResult.final?.markdown ? (
+                  {lastResult.final?.aiResponse?.content ? (
                     <div className="bg-gray-50 p-4 rounded border">
-                      <h3 className="font-medium mb-2">Generated Summary</h3>
+                      <h3 className="font-medium mb-2">Generated Results</h3>
                       <pre className="whitespace-pre-wrap text-sm text-gray-700">
-                        {lastResult.final.markdown}
+                        {lastResult.final.aiResponse.content}
                       </pre>
                     </div>
                   ) : (
                     <p className="text-gray-600">
-                      No markdown results available.
+                      No AI results available.
                     </p>
                   )}
 
